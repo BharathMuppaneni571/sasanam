@@ -32,4 +32,13 @@ interface MemoryDao {
 
     @Query("SELECT * FROM memories WHERE type = :type")
     fun getMemoriesByType(type: String): Flow<List<Memory>>
+
+    @Query("""
+        SELECT DISTINCT memories.* FROM memories 
+        LEFT JOIN memory_fields ON memories.id = memory_fields.memoryId
+        WHERE memories.title LIKE :query 
+        OR memories.description LIKE :query 
+        OR memory_fields.value LIKE :query
+    """)
+    suspend fun searchMemories(query: String): List<Memory>
 }

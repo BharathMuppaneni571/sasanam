@@ -64,9 +64,26 @@ class MainViewModel(
         viewModelScope.launch {
             isProcessing = true
             try {
-                // Simple placeholder logic for now
-                // In v2, this will use vector search + LLM
-                queryAnswer = "Searching for: $query... (Logic pending implementation)"
+                val dbQuery = "%$query%"
+                val results = memoryDao.searchMemories(dbQuery)
+                
+                if (results.isEmpty()) {
+                    queryAnswer = "I couldn't find any memories related to \"$query\"."
+                } else {
+                    val response = StringBuilder("I found ${results.size} relevant memory(s):\n\n")
+                    results.forEach { memory ->
+                        response.append("• ${memory.title ?: "Untitled"}")
+                        val fields = memoryDao.getFieldsForMemory(memory.id)
+                        if (fields.isNotEmpty()) {
+                            val detail = fields.joinToString { "${it.name}: ${it.value}" }
+                            response.append(" ($detail)")
+                        }
+                        response.append("\n")
+                    }
+                    queryAnswer = response.toString()
+                }
+            } catch (e: Exception) {
+                queryAnswer = "Error searching: ${e.message}"
             } finally {
                 isProcessing = false
             }
