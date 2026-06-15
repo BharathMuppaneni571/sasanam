@@ -16,6 +16,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context, passphrase: ByteArray): AppDatabase {
             return INSTANCE ?: synchronized(this) {
+                // Initialize SQLCipher native libraries
+                System.loadLibrary("sqlcipher")
+
                 val factory = SupportOpenHelperFactory(passphrase)
                 val instance = Room.databaseBuilder(
                     context.applicationContext,

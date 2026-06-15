@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -75,10 +76,13 @@ fun SasanamApp(viewModel: MainViewModel) {
             )
         }
         composable("capture") {
+            val context = LocalContext.current
             CaptureScreen(
                 onImageCaptured = { bitmap ->
-                    viewModel.processCapturedImage(bitmap)
-                    navController.navigate("review")
+                    ContextCompat.getMainExecutor(context).execute {
+                        viewModel.processCapturedImage(bitmap)
+                        navController.navigate("review")
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )
