@@ -2,7 +2,10 @@ package com.bh571.sasanam.ui.screens
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
@@ -14,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashAuto
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,20 +42,35 @@ fun CaptureScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
     
+    val cameraProviderFuture = remember { androidx.camera.lifecycle.ProcessCameraProvider.getInstance(context) }
     var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
+    var flashMode by remember { mutableIntStateOf(ImageCapture.FLASH_MODE_AUTO) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val inputStream = context.contentResolver.openInputStream(it)
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            if (bitmap != null) {
+                onImageCaptured(bitmap)
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
             factory = { ctx ->
                 val previewView = PreviewView(ctx)
-                val cameraProviderFuture = androidx.camera.lifecycle.ProcessCameraProvider.getInstance(ctx)
-
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
                     val preview = Preview.Builder().build().also {
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
-                    imageCapture = ImageCapture.Builder().build()
+                    imageCapture = ImageCapture.Builder()
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .setFlashMode(flashMode)
+                        .build()
                     val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                     try {
                         cameraProvider.unbindAll()
@@ -77,7 +97,24 @@ fun CaptureScreen(
                 Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
             }
             Text(text = "Capture", color = Color.White, style = MaterialTheme.typography.titleLarge)
-            Icon(Icons.Default.FlashAuto, contentDescription = "Flash", tint = Color.White)
+            IconButton(onClick = {
+                flashMode = when(flashMode) {
+                    ImageCapture.FLASH_MODE_AUTO -> ImageCapture.FLASH_MODE_ON
+                    ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_OFF
+                    else -> ImageCapture.FLASH_MODE_AUTO
+                }
+                imageCapture?.flashMode = flashMode
+            }) {
+                Icon(
+                    imageVector = when(flashMode) {
+                        ImageCapture.FLASH_MODE_ON -> Icons.Default.FlashOn
+                        ImageCapture.FLASH_MODE_OFF -> Icons.Default.FlashOff
+                        else -> Icons.Default.FlashAuto
+                    },
+                    contentDescription = "Flash",
+                    tint = Color.White
+                )
+            }
         }
 
         // Bottom Controls
@@ -90,7 +127,7 @@ fun CaptureScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                IconButton(onClick = { /* TODO */ }) {
+                IconButton(onClick = { galleryLauncher.launch("image/*") }) {
                     Icon(Icons.Default.Image, contentDescription = "Gallery", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
                 Text("Gallery", color = Color.White, style = MaterialTheme.typography.bodySmall)

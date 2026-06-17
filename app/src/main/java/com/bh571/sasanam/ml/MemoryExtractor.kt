@@ -2,9 +2,14 @@ package com.bh571.sasanam.ml
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import com.bh571.sasanam.data.MemoryField
 import com.google.mlkit.nl.entityextraction.*
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.objects.DetectedObject
+import com.google.mlkit.vision.objects.ObjectDetection
+import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.tasks.await
@@ -14,18 +19,45 @@ class MemoryExtractor(private val context: Context) {
     private val entityExtractor = EntityExtraction.getClient(
         EntityExtractorOptions.Builder(EntityExtractorOptions.ENGLISH).build()
     )
+    
+    // Object detector for non-textual images (e.g. plants, objects)
+    private val objectDetector = ObjectDetection.getClient(
+        ObjectDetectorOptions.Builder()
+            .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
+            .enableMultipleObjects()
+            .enableClassification()
+            .build()
+    )
 
     suspend fun extractFromBitmap(bitmap: Bitmap): ExtractionResult {
         val image = InputImage.fromBitmap(bitmap, 0)
-        val visionText = textRecognizer.process(image).await()
-        val rawText = visionText.text
-
+        val visionText: Text = textRecognizer.process(image).await()
+        
+        // 1. Capture every text block
+        val allTextBuilder = StringBuilder()
+        for (block in visionText.textBlocks) {
+            allTextBuilder.append(block.text).append("\n")
+        }
+        
+        // 2. Object Detection for visual identifiers
+        try {
+            val objects: List<DetectedObject> = objectDetector.process(image).await()
+            for (obj in objects) {
+                for (label in obj.labels) {
+                    allTextBuilder.append("Visual: ${label.text} (${(label.confidence * 100).toInt()}%)\n")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MemoryExtractor", "Object detection failed", e)
+        }
+        
+        val fullRawText = allTextBuilder.toString().trim()
         val fields = mutableListOf<MemoryField>()
 
-        // 1. ML Kit Entity Extraction
+        // 3. ML Kit Entity Extraction
         try {
             entityExtractor.downloadModelIfNeeded().await()
-            val params = EntityExtractionParams.Builder(rawText).build()
+            val params = EntityExtractionParams.Builder(fullRawText).build()
             val entities = entityExtractor.annotate(params).await()
 
             for (entityAnnotation in entities) {
@@ -50,10 +82,10 @@ class MemoryExtractor(private val context: Context) {
             // Handle entity extraction failure
         }
 
-        // 2. Custom Regex for Indian Formats
-        extractRegexFields(rawText, fields)
+        // 4. Custom Regex for Indian Formats
+        extractRegexFields(fullRawText, fields)
 
-        return ExtractionResult(rawText, fields)
+        return ExtractionResult(fullRawText, fields)
     }
 
     private fun extractRegexFields(text: String, fields: MutableList<MemoryField>) {

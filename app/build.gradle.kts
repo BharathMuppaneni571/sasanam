@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.bh571.sasanam"
-        minSdk = 26
+        minSdk = 31
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -49,6 +49,8 @@ dependencies {
     // ML Kit
     implementation(libs.mlkit.text.recognition)
     implementation(libs.mlkit.entity.extraction)
+    implementation(libs.mlkit.genai.prompt)
+    implementation(libs.mlkit.objects)
 
     // Room
     implementation(libs.room.runtime)
@@ -65,12 +67,16 @@ dependencies {
 
     // Security
     implementation(libs.security.crypto)
+    implementation(libs.androidx.biometric)
 
     // Navigation
     implementation(libs.navigation.compose)
 
     // Play Services Coroutines
     implementation(libs.kotlinx.coroutines.play.services)
+
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

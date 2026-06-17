@@ -28,104 +28,146 @@ fun DashboardScreen(
     onSearchClick: () -> Unit,
     onMemoryClick: (Memory) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Dashboard",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+    var selectedCategory by remember { mutableStateOf("All") }
 
-        // Search Bar
-        OutlinedTextField(
-            value = "",
-            onValueChange = { onSearchClick() },
-            placeholder = { Text("Search memories...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = { Icon(Icons.Default.Tune, contentDescription = null) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onSearchClick() },
-            shape = RoundedCornerShape(12.dp),
-            enabled = false, // Tap to navigate to Ask screen
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val filteredMemories = remember(memories, selectedCategory) {
+        if (selectedCategory == "All") {
+            memories
+        } else {
+            memories.filter { 
+                when(selectedCategory) {
+                    "Bills" -> it.type.contains("Bill", ignoreCase = true) || (it.rawText?.contains("Bill", ignoreCase = true) == true)
+                    "Receipts" -> it.type.contains("Receipt", ignoreCase = true) || (it.rawText?.contains("Receipt", ignoreCase = true) == true)
+                    "IDs" -> it.type.contains("ID", ignoreCase = true) || it.type.contains("Aadhar", ignoreCase = true) || it.type.contains("PAN", ignoreCase = true)
+                    "Policies" -> it.type.contains("Policy", ignoreCase = true) || it.type.contains("Insurance", ignoreCase = true)
+                    else -> true
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { /* TODO Notification */ }) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
             )
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Category Chips
-        val categories = listOf(
-            Category("All", memories.size.toString(), Icons.Default.GridView, true),
-            Category("Bills", "42", Icons.Default.Receipt),
-            Category("Receipts", "28", Icons.Default.ShoppingCart),
-            Category("IDs", "18", Icons.Default.Badge),
-            Category("Policies", "12", Icons.Default.Description)
-        )
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(categories) { category ->
-                CategoryChip(category)
-            }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 16.dp)
         ) {
-            Text(text = "Recent Memories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            TextButton(onClick = { /* TODO */ }) {
-                Text(text = "View all", color = MaterialTheme.colorScheme.primary)
+            // Search Bar
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSearchClick() }
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 2.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Search memories...", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(memories.take(5)) { memory ->
-                MemoryItem(memory = memory, onClick = { onMemoryClick(memory) })
+            // Category Chips
+            val categories = listOf(
+                Category("All", memories.size.toString(), Icons.Default.GridView),
+                Category("Bills", memories.count { 
+                    it.type.contains("Bill", true) || (it.rawText?.contains("Bill", true) == true)
+                }.toString(), Icons.Default.Receipt),
+                Category("Receipts", memories.count { 
+                    it.type.contains("Receipt", true) || (it.rawText?.contains("Receipt", true) == true)
+                }.toString(), Icons.Default.ShoppingCart),
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(categories) { category ->
+                    CategoryChip(category.copy(selected = category.name == selectedCategory)) {
+                        selectedCategory = category.name
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Recent Memories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                TextButton(onClick = { /* TODO */ }) {
+                    Text(text = "View all", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(
+                    items = filteredMemories.take(10),
+                    key = { it.id }
+                ) { memory ->
+                    MemoryItem(memory = memory, onClick = { 
+                        onMemoryClick(memory) 
+                    })
+                }
             }
         }
     }
 }
 
+
 data class Category(val name: String, val count: String, val icon: ImageVector, val selected: Boolean = false)
 
 @Composable
-fun CategoryChip(category: Category) {
+fun CategoryChip(category: Category, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (category.selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(24.dp),
+        color = if (category.selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         contentColor = if (category.selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(width = 80.dp, height = 100.dp)
+        border = if (!category.selected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
+        modifier = Modifier
+            .clickable { onClick() }
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(8.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Icon(imageVector = category.icon, contentDescription = null, modifier = Modifier.size(28.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = category.name, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            Text(text = category.count, fontSize = 10.sp)
+            Icon(imageVector = category.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = category.name, style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "(${category.count})", 
+                style = MaterialTheme.typography.labelSmall,
+                color = if (category.selected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

@@ -30,6 +30,9 @@ interface MemoryDao {
     @Delete
     suspend fun deleteMemory(memory: Memory)
 
+    @Update
+    suspend fun updateMemory(memory: Memory)
+
     @Query("SELECT * FROM memories WHERE type = :type")
     fun getMemoriesByType(type: String): Flow<List<Memory>>
 
@@ -38,6 +41,8 @@ interface MemoryDao {
         LEFT JOIN memory_fields ON memories.id = memory_fields.memoryId
         WHERE memories.title LIKE :query 
         OR memories.description LIKE :query 
+        OR memories.rawText LIKE :query
+        OR memories.type LIKE :query
         OR memory_fields.value LIKE :query
     """)
     suspend fun searchMemories(query: String): List<Memory>
