@@ -36,6 +36,7 @@ import com.bh571.sasanam.ml.GenAIManager
 import com.bh571.sasanam.ml.MemoryExtractor
 import com.bh571.sasanam.ui.screens.*
 import com.bh571.sasanam.ui.screens.details.MemoryDetailScreen
+import com.bh571.sasanam.ui.theme.SasanamPurple
 import com.bh571.sasanam.ui.theme.SasanamTheme
 
 class MainActivity : FragmentActivity() {
@@ -58,7 +59,16 @@ class MainActivity : FragmentActivity() {
         val viewModel = MainViewModel(db.memoryDao(), MemoryExtractor(this), settingsRepository, genAIManager)
 
         setContent {
-            SasanamTheme {
+            val primaryColorHex by viewModel.primaryColorHex.collectAsStateWithLifecycle()
+            val primaryColor = remember(primaryColorHex) {
+                try {
+                    Color(android.graphics.Color.parseColor(primaryColorHex))
+                } catch (e: Exception) {
+                    SasanamPurple
+                }
+            }
+
+            SasanamTheme(primaryColor = primaryColor) {
                 val isUnlocked = viewModel.isAppUnlocked
                 val biometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
 
@@ -280,9 +290,13 @@ fun SasanamApp(viewModel: MainViewModel) {
             }
             composable(Screen.Settings.route) {
                 val biometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
+                val primaryColorHex by viewModel.primaryColorHex.collectAsStateWithLifecycle()
                 SettingsScreen(
                     biometricEnabled = biometricEnabled,
-                    onBiometricToggle = { viewModel.setBiometricEnabled(it) }
+                    onBiometricToggle = { viewModel.setBiometricEnabled(it) },
+                    primaryColorHex = primaryColorHex,
+                    onColorSelected = { viewModel.setPrimaryColor(it) },
+                    onClearData = { viewModel.clearAllData() }
                 )
             }
             composable("capture") {

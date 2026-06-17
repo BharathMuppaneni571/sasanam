@@ -45,6 +45,14 @@ fun CaptureScreen(
     val cameraProviderFuture = remember { androidx.camera.lifecycle.ProcessCameraProvider.getInstance(context) }
     var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
     var flashMode by remember { mutableIntStateOf(ImageCapture.FLASH_MODE_AUTO) }
+    var isCameraReady by remember { mutableStateOf(false) }
+
+    // Ensure imageCapture is initialized immediately if possible
+    LaunchedEffect(flashMode, isCameraReady) {
+        if (isCameraReady) {
+            imageCapture?.flashMode = flashMode
+        }
+    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -67,14 +75,18 @@ fun CaptureScreen(
                     val preview = Preview.Builder().build().also {
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
-                    imageCapture = ImageCapture.Builder()
+                    val captureUseCase = ImageCapture.Builder()
                         .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                         .setFlashMode(flashMode)
                         .build()
+                    
+                    imageCapture = captureUseCase
+                    
                     val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                     try {
                         cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCapture)
+                        cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, captureUseCase)
+                        isCameraReady = true
                     } catch (exc: Exception) {
                         Log.e("CaptureScreen", "Use case binding failed", exc)
                     }
@@ -137,12 +149,12 @@ fun CaptureScreen(
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .border(4.dp, Color.White, CircleShape)
+                    .let { if (isCameraReady) it.border(4.dp, Color.White, CircleShape) else it }
                     .padding(4.dp)
-                    .background(Color.White, CircleShape)
+                    .background(if (isCameraReady) Color.White else Color.Gray, CircleShape)
                     .border(2.dp, Color.Black, CircleShape)
                     .padding(2.dp)
-                    .clickable {
+                    .clickable(enabled = isCameraReady) {
                         val capture = imageCapture ?: return@clickable
                         capture.takePicture(
                             cameraExecutor,

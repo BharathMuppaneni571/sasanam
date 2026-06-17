@@ -49,12 +49,7 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { /* TODO Notification */ }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
+                title = { Text("Dashboard", fontWeight = FontWeight.Bold) }
             )
         }
     ) { padding ->

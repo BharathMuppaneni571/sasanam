@@ -35,6 +35,7 @@ fun SasanamTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false, // Disable for exact mockup match
+    primaryColor: Color = SasanamPurple,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -42,8 +43,8 @@ fun SasanamTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> DarkColorScheme.copy(primary = primaryColor)
+        else -> LightColorScheme.copy(primary = primaryColor)
     }
 
     MaterialTheme(

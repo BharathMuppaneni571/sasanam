@@ -1,8 +1,15 @@
 package com.bh571.sasanam.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,10 +26,17 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsScreen(
     biometricEnabled: Boolean,
-    onBiometricToggle: (Boolean) -> Unit
+    onBiometricToggle: (Boolean) -> Unit,
+    primaryColorHex: String,
+    onColorSelected: (String) -> Unit,
+    onClearData: () -> Unit
 ) {
     var darkModeEnabled by remember { mutableStateOf(false) }
     var showClearDataDialog by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) }
+    var customHexCode by remember { mutableStateOf(primaryColorHex) }
+
+    val presetColors = listOf("#673AB7", "#3F51B5", "#2196F3", "#009688", "#4CAF50", "#FFC107", "#FF5722", "#F44336", "#E91E63")
 
     Scaffold(
         topBar = {
@@ -37,13 +51,30 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SettingsSection(title = "General") {
+            SettingsSection(title = "Appearance") {
                 SettingsToggleItem(
                     icon = Icons.Default.DarkMode,
                     title = "Dark Mode",
                     subtitle = "Use a darker theme for the app",
                     checked = darkModeEnabled,
                     onCheckedChange = { darkModeEnabled = it }
+                )
+                SettingsItem(
+                    icon = Icons.Default.Palette,
+                    title = "Theme Color",
+                    subtitle = "Change the primary color of the app",
+                    onClick = { showColorPicker = true }
+                )
+                // Show current color indicator
+                Box(
+                    modifier = Modifier
+                        .padding(start = 56.dp, bottom = 16.dp)
+                        .size(40.dp)
+                        .background(
+                            color = try { Color(android.graphics.Color.parseColor(primaryColorHex)) } catch (e: Exception) { MaterialTheme.colorScheme.primary },
+                            shape = CircleShape
+                        )
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                 )
             }
 
@@ -98,6 +129,63 @@ fun SettingsScreen(
         }
     }
 
+    if (showColorPicker) {
+        AlertDialog(
+            onDismissRequest = { showColorPicker = false },
+            title = { Text("Select Theme Color") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Presets", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        presetColors.take(5).forEach { hex ->
+                            ColorItem(hex = hex) {
+                                onColorSelected(hex)
+                                showColorPicker = false
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        presetColors.drop(5).forEach { hex ->
+                            ColorItem(hex = hex) {
+                                onColorSelected(hex)
+                                showColorPicker = false
+                            }
+                        }
+                    }
+                    
+                    Spacer(Modifier.height(8.dp))
+                    Text("Custom Hex Code", style = MaterialTheme.typography.labelMedium)
+                    OutlinedTextField(
+                        value = customHexCode,
+                        onValueChange = { 
+                            customHexCode = it
+                            if (it.length == 7 && it.startsWith("#")) {
+                                try {
+                                    android.graphics.Color.parseColor(it)
+                                    onColorSelected(it)
+                                } catch (e: Exception) {}
+                            }
+                        },
+                        placeholder = { Text("#673AB7") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showColorPicker = false }) {
+                    Text("Done")
+                }
+            }
+        )
+    }
+
     if (showClearDataDialog) {
         AlertDialog(
             onDismissRequest = { showClearDataDialog = false },
@@ -105,7 +193,10 @@ fun SettingsScreen(
             text = { Text("This action cannot be undone. All your offline memories and extracted facts will be permanently deleted.") },
             confirmButton = {
                 TextButton(
-                    onClick = { showClearDataDialog = false },
+                    onClick = { 
+                        onClearData()
+                        showClearDataDialog = false 
+                    },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Clear Everything")
@@ -132,6 +223,18 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
         content()
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
     }
+}
+
+@Composable
+fun ColorItem(hex: String, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .size(44.dp)
+            .clickable { onClick() },
+        shape = CircleShape,
+        color = Color(android.graphics.Color.parseColor(hex)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {}
 }
 
 @Composable

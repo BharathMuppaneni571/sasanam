@@ -30,6 +30,9 @@ class MainViewModel(
     val isBiometricEnabled: StateFlow<Boolean> = settingsRepository.isBiometricEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val primaryColorHex: StateFlow<String> = settingsRepository.primaryColorHex
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "#673AB7")
+
     var isAppUnlocked by mutableStateOf(false)
         private set
 
@@ -159,6 +162,14 @@ class MainViewModel(
         queryAnswer = null
     }
 
+    fun clearAllData() {
+        viewModelScope.launch {
+            // This would normally be more complex in a real app (clearing files, etc)
+            // But for now, we clear the DB
+            memories.value.forEach { memoryDao.deleteMemory(it) }
+        }
+    }
+
     fun selectMemory(memory: Memory) {
         viewModelScope.launch {
             val fields = memoryDao.getFieldsForMemory(memory.id)
@@ -194,6 +205,12 @@ class MainViewModel(
     fun setBiometricEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setBiometricEnabled(enabled)
+        }
+    }
+
+    fun setPrimaryColor(hex: String) {
+        viewModelScope.launch {
+            settingsRepository.setPrimaryColorHex(hex)
         }
     }
 }
